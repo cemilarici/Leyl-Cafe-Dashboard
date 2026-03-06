@@ -1,0 +1,57 @@
+# ─── Stage 1: Frontend deps ───────────────────────────────────────────────────
+FROM node:20-alpine AS frontend-deps
+WORKDIR /app
+COPY src/frontend/package.json src/frontend/package-lock.json ./
+RUN npm ci
+
+# ─── Stage 2: Frontend build ──────────────────────────────────────────────────
+FROM node:20-alpine AS frontend-builder
+WORKDIR /app
+COPY --from=frontend-deps /app/node_modules ./node_modules
+COPY src/frontend/ .
+# Backend is on localhost inside the same container
+ARG BACKEND_URL=http://localhost:8000
+ENV BACKEND_URL=$BACKEND_URL
+ENV NEXT_TELEMETRY_DISABLED=1
+RUN npm run build
+
+# ─── Stage 3: Combined runtime ────────────────────────────────────────────────
+FROM python:3.12-slim
+
+# Install Node.js 20 + supervisord + gcc
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    curl gcc supervisor \
+    && curl -fsSL https://deb.nodesource.com/setup_20.x | bash - \
+    && apt-get install -y nodejs \
+    && rm -rf /var/lib/apt/lists/*
+
+WORKDIR /app
+
+# ── Python backend ────────────────────────────────────────────────────────────
+COPY src/backend/requirements.txt /app/backend/requirements.txt
+RUN pip install --no-cache-dir -r /app/backend/requirements.txt
+COPY src/backend/ /app/backend/
+
+# ── Next.js standalone build ──────────────────────────────────────────────────
+COPY --from=frontend-builder /app/.next/standalone /app/frontend/
+COPY --from=frontend-builder /app/.next/static     /app/frontend/.next/static
+
+# ── Config & data dir ─────────────────────────────────────────────────────────
+COPY supervisord.conf /etc/supervisor/conf.d/leyl.conf
+RUN mkdir -p /app/data && \
+    adduser --disabled-password --gecos "" appuser && \
+    chown -R appuser:appuser /app
+
+USER appuser
+
+EXPOSE 3000
+
+ENV NODE_ENV=production
+ENV NEXT_TELEMETRY_DISABLED=1
+# Rewrites inside Next.js server → uvicorn on localhost
+ENV BACKEND_URL=http://localhost:8000
+
+HEALTHCHECK --interval=30s --timeout=5s --start-period=30s --retries=3 \
+  CMD wget -qO- http://localhost:3000/ || exit 1
+
+CMD ["/usr/bin/supervisord", "-n", "-c", "/etc/supervisor/supervisord.conf"]
