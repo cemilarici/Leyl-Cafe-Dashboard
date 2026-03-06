@@ -1,0 +1,45 @@
+services:
+  backend:
+    build:
+      context: ./src/backend
+    container_name: leyl_backend
+    environment:
+      DATABASE_URL: sqlite+aiosqlite:///./data/leylcafe.db
+      SECRET_KEY: ${SECRET_KEY:-leyl-pastane-change-this-secret-key-32}
+      APP_ENV: production
+      ACCESS_TOKEN_EXPIRE_MINUTES: ${ACCESS_TOKEN_EXPIRE_MINUTES:-60}
+      REFRESH_TOKEN_EXPIRE_DAYS: ${REFRESH_TOKEN_EXPIRE_DAYS:-7}
+      CORS_ORIGINS: '["http://localhost:3000"]'
+    volumes:
+      - db_data:/app/data
+    ports:
+      - "${BACKEND_PORT:-8000}:8000"
+    restart: unless-stopped
+    networks:
+      - leyl_net
+
+  frontend:
+    build:
+      context: ./src/frontend
+      args:
+        BACKEND_URL: http://backend:8000
+    container_name: leyl_frontend
+    environment:
+      BACKEND_URL: http://backend:8000
+      NEXT_PUBLIC_API_URL: /api/v1
+    ports:
+      - "${FRONTEND_PORT:-3000}:3000"
+    depends_on:
+      backend:
+        condition: service_healthy
+    restart: unless-stopped
+    networks:
+      - leyl_net
+
+volumes:
+  db_data:
+    driver: local
+
+networks:
+  leyl_net:
+    driver: bridge

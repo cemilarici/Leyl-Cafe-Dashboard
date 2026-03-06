@@ -453,7 +453,7 @@ export default function InventoryPage() {
           ))}
           {!ingredients?.length && (
             <div className="col-span-full py-12 text-center text-sm" style={{ color: "var(--muted)" }}>
-              Henüz hammadde yok. "Yeni Hammadde" ile ekleyin.
+              Henüz hammadde yok. &quot;Yeni Hammadde&quot; ile ekleyin.
             </div>
           )}
         </div>

@@ -39,10 +39,8 @@ import {
 
 const PALETTE = ["#CB6B2C", "#4A7A5A", "#E8946A", "#8B7355", "#C44A35", "#6B9080", "#D4A373"];
 
-const PIE_LABEL = ({ cx, cy, midAngle, innerRadius, outerRadius, percent }: {
-  cx: number; cy: number; midAngle: number;
-  innerRadius: number; outerRadius: number; percent: number;
-}) => {
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+const PIE_LABEL = ({ cx, cy, midAngle, innerRadius, outerRadius, percent }: any) => {
   if (percent < 0.05) return null;
   const RADIAN = Math.PI / 180;
   const r = innerRadius + (outerRadius - innerRadius) * 0.55;
