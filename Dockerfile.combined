@@ -48,6 +48,7 @@ EXPOSE 3000
 
 ENV NODE_ENV=production
 ENV NEXT_TELEMETRY_DISABLED=1
+ENV PORT=3000
 # Rewrites inside Next.js server → uvicorn on localhost
 ENV BACKEND_URL=http://localhost:8000
 
